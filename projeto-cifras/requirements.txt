@@ -1,0 +1,7 @@
+requests
+beautifulsoup4
+fpdf2
+python-docx
+Flask
+pytest>=7.0
+pytest-mock>=3.0

@@ -22,7 +22,6 @@ function validateUrl(url: string): string | null {
 
 export default function Home() {
   const [url, setUrl] = useState('');
-  const [format, setFormat] = useState<'pdf' | 'docx'>('pdf');
   const [loading, setLoading] = useState<LoadingStage>('');
   const [urlError, setUrlError] = useState('');
   const [error, setError] = useState('');
@@ -57,7 +56,7 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url, format }),
+        body: JSON.stringify({ url, format: 'docx' }),
       });
 
       if (!response.ok) {
@@ -72,7 +71,7 @@ export default function Home() {
       a.href = downloadUrl;
 
       const contentDisposition = response.headers.get('Content-Disposition');
-      let filename = `cifra.${format}`;
+      let filename = 'cifra.docx';
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch && filenameMatch[1]) {
@@ -138,34 +137,6 @@ export default function Home() {
                 {urlError}
               </p>
             )}
-          </div>
-
-          <div className="space-y-3">
-            <label className="block text-lg font-medium text-gray-300">
-              Formato de Saída
-            </label>
-            <div className="grid grid-cols-2 gap-4">
-              <label className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${format === 'pdf' ? 'border-orange-500 bg-orange-500/10' : 'border-gray-600 bg-gray-900/50 hover:border-gray-500'}`}>
-                <input
-                  type="radio"
-                  value="pdf"
-                  checked={format === 'pdf'}
-                  onChange={() => setFormat('pdf')}
-                  className="hidden"
-                />
-                <span className={`text-lg font-bold ${format === 'pdf' ? 'text-orange-400' : 'text-gray-400'}`}>PDF</span>
-              </label>
-              <label className={`flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${format === 'docx' ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 bg-gray-900/50 hover:border-gray-500'}`}>
-                <input
-                  type="radio"
-                  value="docx"
-                  checked={format === 'docx'}
-                  onChange={() => setFormat('docx')}
-                  className="hidden"
-                />
-                <span className={`text-lg font-bold ${format === 'docx' ? 'text-blue-400' : 'text-gray-400'}`}>DOCX</span>
-              </label>
-            </div>
           </div>
 
           {error && (

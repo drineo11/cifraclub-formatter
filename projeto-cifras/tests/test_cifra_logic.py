@@ -4,7 +4,6 @@ from lib.cifra_logic import (
     is_header_line,
     transpose_note,
     transpose_chord,
-    sanitize_text_for_pdf,
     deduplicate_sections,
 )
 
@@ -84,23 +83,6 @@ class TestTransposeChord:
 
     def test_chord_with_flat(self):
         assert transpose_chord("Bb", 1) == "B"
-
-
-class TestSanitizeTextForPdf:
-    def test_en_dash_converted(self):
-        assert sanitize_text_for_pdf("\u2013") == "-"
-
-    def test_em_dash_converted(self):
-        assert sanitize_text_for_pdf("\u2014") == "-"
-
-    def test_single_quotes_converted(self):
-        assert sanitize_text_for_pdf("\u2018") == "'"
-
-    def test_non_breaking_space_converted(self):
-        assert sanitize_text_for_pdf("\u00a0") == " "
-
-    def test_unicode_chars_preserved(self):
-        assert sanitize_text_for_pdf("C G Am F") == "C G Am F"
 
 
 class TestDeduplicateSections:

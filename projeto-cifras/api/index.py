@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from lib.cifra_logic import get_cifra_content, generate_pdf_bytes, generate_docx_bytes
+from lib.cifra_logic import get_cifra_content, generate_docx_bytes
 
 app = Flask(__name__)
 
@@ -86,28 +86,7 @@ def generate():
         ).rstrip()
         filename = f"{safe_title}_{safe_artist}".replace(" ", "_")
 
-        if format_type == "pdf":
-            pdf_bytes = generate_pdf_bytes(title, artist, key, lines)
-            logger.info(
-                json.dumps(
-                    {
-                        "request_id": request_id,
-                        "event": "success",
-                        "title": title,
-                        "format": "pdf",
-                        "duration_seconds": (
-                            datetime.now() - start_time
-                        ).total_seconds(),
-                    }
-                )
-            )
-            return send_file(
-                io.BytesIO(pdf_bytes),
-                mimetype="application/pdf",
-                as_attachment=True,
-                download_name=f"{filename}.pdf",
-            )
-        elif format_type == "docx":
+        if format_type == "docx":
             docx_bytes = generate_docx_bytes(title, artist, key, lines)
             logger.info(
                 json.dumps(

@@ -1,7 +1,6 @@
 import requests
 import re
 from bs4 import BeautifulSoup
-from fpdf import FPDF
 import sys
 import io
 import os
@@ -9,40 +8,6 @@ from docx import Document
 from docx.shared import Pt, Cm
 from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT, WD_BREAK
-
-# Map of Unicode characters to ASCII equivalents for PDF (Courier font only supports Latin-1)
-UNICODE_REPLACEMENTS = {
-    "\u2013": "-",  # en-dash → hyphen
-    "\u2014": "-",  # em-dash → hyphen
-    "\u2018": "'",  # left single quote
-    "\u2019": "'",  # right single quote
-    "\u201c": '"',  # left double quote
-    "\u201d": '"',  # right double quote
-    "\u2026": "...",  # ellipsis
-    "\u00a0": " ",  # non-breaking space
-    "\u2022": "-",  # bullet
-    "\u2012": "-",  # figure dash
-    "\u2015": "-",  # horizontal bar
-}
-
-
-def sanitize_text_for_pdf(text):
-    """Replace Unicode characters unsupported by Courier font with ASCII equivalents."""
-    for unicode_char, replacement in UNICODE_REPLACEMENTS.items():
-        text = text.replace(unicode_char, replacement)
-    return text
-
-
-class PDF(FPDF):
-    def header(self):
-        self.set_font("Helvetica", "B", 15)
-        # Title will be set in the main logic
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("Helvetica", "I", 8)
-        self.cell(0, 10, f"Página {self.page_no()}/{{nb}}", align="C")
-
 
 NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 NOTES_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
@@ -653,24 +618,6 @@ def build_row_lines(row_units, gap):
     return result
 
 
-def _calculate_layout_for_units(units, available_height, available_width):
-    options = [12, 11.5, 11, 10.5, 10, 9.5, 9, 8.5, 8]
-
-    for font_size in options:
-        line_height = (font_size * 1.2) * 0.3527
-        char_width_mm = (font_size * 0.6) * 0.3527
-        max_chars = int(available_width / char_width_mm)
-        reflowed_lines = reflow_units(units, max_chars)
-        total_height_needed = len(reflowed_lines) * line_height
-
-        if total_height_needed <= available_height:
-            return font_size, reflowed_lines, line_height
-
-    fallback_size = 8
-    max_chars = int(available_width / ((fallback_size * 0.6) * 0.3527))
-    return fallback_size, reflow_units(units, max_chars), (fallback_size * 1.2) * 0.3527
-
-
 def calculate_layout(lines, available_height, available_width):
     lines = deduplicate_sections(lines)
     options = [12, 11.5, 11, 10.5, 10, 9.5, 9, 8.5, 8]
@@ -678,7 +625,7 @@ def calculate_layout(lines, available_height, available_width):
 
     for font_size in options:
         line_height = (font_size * 1.2) * 0.3527
-        char_width_mm = (font_size * 0.6) * 0.3527
+        char_width_mm = (font_size * 0.5) * 0.3527
         max_chars = int(available_width / char_width_mm)
         reflowed_lines = reflow_units(units, max_chars)
         total_height_needed = len(reflowed_lines) * line_height
@@ -687,79 +634,8 @@ def calculate_layout(lines, available_height, available_width):
             return font_size, reflowed_lines, line_height
 
     fallback_size = 8
-    max_chars = int(available_width / ((fallback_size * 0.6) * 0.3527))
+    max_chars = int(available_width / ((fallback_size * 0.5) * 0.3527))
     return fallback_size, reflow_units(units, max_chars), (fallback_size * 1.2) * 0.3527
-
-
-def generate_pdf_bytes(title, artist, key, lines):
-    pdf = PDF(orientation="P")
-    pdf.set_margins(5, 5, 5)
-    pdf.alias_nb_pages()
-    pdf.add_page()
-
-    pdf.set_font("Helvetica", "BU", 14)
-    pdf.cell(
-        0, 5, sanitize_text_for_pdf(title), new_x="LMARGIN", new_y="NEXT", align="C"
-    )
-
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(
-        0, 7, sanitize_text_for_pdf(artist), new_x="LMARGIN", new_y="NEXT", align="C"
-    )
-
-    header_height = 15
-
-    usable_width = 200
-    usable_height = 287 - header_height
-
-    deduped_lines = deduplicate_sections(lines)
-    units = pair_lines(deduped_lines)
-    units_a, units_b = split_by_sections(units)
-
-    col_width = 95
-    col_gap = 10
-    col1_x = 5
-    col2_x = col1_x + col_width + col_gap
-
-    font_size_a, reflowed_lines_a, line_height_a = _calculate_layout_for_units(
-        units_a, usable_height, col_width
-    )
-    font_size_b, reflowed_lines_b, line_height_b = _calculate_layout_for_units(
-        units_b, usable_height, col_width
-    )
-
-    font_size = min(font_size_a, font_size_b)
-    line_height = line_height_a if font_size == font_size_a else line_height_b
-
-    initial_y = pdf.get_y()
-    pdf.set_xy(col1_x, initial_y)
-
-    for i in range(max(len(reflowed_lines_a), len(reflowed_lines_b))):
-        pdf.set_y(initial_y + i * line_height)
-
-        if i < len(reflowed_lines_a):
-            pdf.set_x(col1_x)
-            pdf.set_font("Courier", "", font_size)
-            for segment in reflowed_lines_a[i]:
-                text = sanitize_text_for_pdf(segment["text"])
-                is_bold = segment["bold"]
-                is_italic = segment.get("italic", False)
-                style = ("B" if is_bold else "") + ("I" if is_italic else "")
-                pdf.set_font("Courier", style, font_size)
-                pdf.write(line_height, text)
-
-        if i < len(reflowed_lines_b):
-            pdf.set_x(col2_x)
-            pdf.set_font("Courier", "", font_size)
-            for segment in reflowed_lines_b[i]:
-                text = sanitize_text_for_pdf(segment["text"])
-                is_bold = segment["bold"]
-                is_italic = segment.get("italic", False)
-                style = ("B" if is_bold else "") + ("I" if is_italic else "")
-                pdf.set_font("Courier", style, font_size)
-                pdf.write(line_height, text)
-
-    return pdf.output(dest="S")
 
 
 def generate_docx_bytes(title, artist, key, lines):
@@ -795,7 +671,7 @@ def generate_docx_bytes(title, artist, key, lines):
     usable_height = 270
 
     font_size, reflowed_lines, _ = calculate_layout(lines, usable_height, usable_width)
-    font_name = "Courier New"
+    font_name = "Arial"
 
     for line_segments in reflowed_lines:
         p = doc.add_paragraph()

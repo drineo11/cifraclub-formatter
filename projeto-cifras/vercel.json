@@ -1,13 +1,10 @@
 {
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.py"
-    }
-  ],
+  "buildCommand": "npm run build",
+  "installCommand": "npm install && pip install -r requirements.txt",
+  "framework": "nextjs",
   "functions": {
     "api/index.py": {
-      "maxDuration": 30,
+      "maxDuration": 60,
       "includeFiles": "lib/**"
     }
   }

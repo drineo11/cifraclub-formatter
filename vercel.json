@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd projeto-cifras && npm install && npm run build",
+  "outputDirectory": "projeto-cifras/.next",
+  "framework": "nextjs",
+  "installCommand": "cd projeto-cifras && npm install"
+}

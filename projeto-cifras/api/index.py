@@ -78,13 +78,13 @@ def generate():
     try:
         title, artist, key, lines = get_cifra_content(url, target_key_index)
 
-        safe_title = "".join(
-            [c for c in title if c.isalpha() or c.isdigit() or c == " "]
-        ).rstrip()
-        safe_artist = "".join(
-            [c for c in artist if c.isalpha() or c.isdigit() or c == " "]
-        ).rstrip()
-        filename = f"{safe_title}_{safe_artist}".replace(" ", "_")
+        def to_ascii(text):
+            import unicodedata
+
+            text = unicodedata.normalize("NFD", text)
+            return "".join(c for c in text if c.isascii() or c.isdigit()).strip()
+
+        filename = to_ascii(title).replace(" ", "_")
 
         if format_type == "docx":
             docx_bytes = generate_docx_bytes(title, artist, key, lines)

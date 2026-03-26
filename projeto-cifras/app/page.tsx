@@ -89,6 +89,7 @@ export default function Home() {
       setError(message);
     } finally {
       setLoading('');
+      setUrl('');
     }
   };
 
